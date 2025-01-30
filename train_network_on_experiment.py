@@ -1,20 +1,25 @@
 import os
 import torch
+import json
 import numpy as np
 from data_path import DATA_PATH
 from torch.utils.data import DataLoader
 from utils.networks import RegressionUNet
-from utils.data_loading import PalpaitineDataset
+from utils.data_loading import PalpaitineDataset, MemoryFriendlyPalpaitineDataset
 
 EXPERIMENTAL_DATA = True
 NUM_EPOCHS = 200
 BASE_PATH = rf"{DATA_PATH}/model_weights_experiment\fold_"
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f'using device: {device}')
 
 for fold in [0, 1, 2, 3, 4]:
 
     if not os.path.exists(f"{BASE_PATH}{fold}"):
         os.makedirs(f"{BASE_PATH}{fold}")
 
+    '''
     train_data = PalpaitineDataset(data_path=f"{DATA_PATH}/training",
                                    augment=False, use_all_data=True, experimental_data=EXPERIMENTAL_DATA)
 
@@ -50,11 +55,23 @@ for fold in [0, 1, 2, 3, 4]:
                                  std_fluence=std_fluence,
                                  experimental_data=EXPERIMENTAL_DATA
                                  )
-
+    '''
+    with open(f"utils/dataset_stats.json") as f:
+        stats = json.load(f)
+    breakpoint()
+    train_data = MemoryFriendlyPalpaitineDataset(
+        data_path=f"{DATA_PATH}/training", stats=stats, fold=fold, train=True,
+        device=device, augment=True, experimental_data=EXPERIMENTAL_DATA
+    )
+    val_data = MemoryFriendlyPalpaitineDataset(
+        data_path=f"{DATA_PATH}/training", stats=stats, fold=fold, train=False,
+        device=device, augment=False, experimental_data=EXPERIMENTAL_DATA
+    )
+    
     trainloader = DataLoader(dataset=train_data, shuffle=True, batch_size=15)
     valloader = DataLoader(dataset=val_data, shuffle=False, batch_size=10)
     num_iterations_per_epoch = len(trainloader)
-
+    
     model = RegressionUNet(out_channels=2)
     model.to(device)
 
@@ -68,7 +85,7 @@ for fold in [0, 1, 2, 3, 4]:
     validation_losses = np.zeros((NUM_EPOCHS, 4))
 
     for epoch in range(NUM_EPOCHS):  # loop over the dataset multiple times
-
+        
         running_loss = 0.0
         for i, data in enumerate(trainloader, 0):
             # get the inputs; data is a list of [inputs, labels]

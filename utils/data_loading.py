@@ -108,6 +108,97 @@ class PalpaitineDataset(Dataset):
                 self.scatterings[idx].to(self.device),
                 self.fluences[idx].to(self.device),
                 self.instance_segmentations[idx])
+        
+
+class MemoryFriendlyPalpaitineDataset(Dataset):
+
+    def __init__(self,
+                 data_path : str,
+                 stats : dict, # {'fluence': {'min': np.inf, 'max': -np.inf, 'mean': 0.0, 'std': 0.0, 'ssr': 0.0}, ...}
+                 fold : int=0,
+                 train : bool=True,
+                 device : str="cpu",
+                 augment : bool=False,
+                 use_all_data : bool=False,
+                 experimental_data : bool=False) -> None:
+        
+        # Randomised but reproducible fold-partitions for the 84 phantoms in the training data set
+        folds = {
+            0: [ 2, 79,  5, 66, 55, 45, 62, 26, 18, 75, 73, 24, 39, 36, 48, 33],
+            1: [37, 67, 13, 71,  3,  1, 69, 78, 54, 72, 11, 25, 34, 40, 12, 51],
+            2: [19, 30, 83, 57, 74, 53, 41, 82, 20, 31, 28, 76, 81, 64, 42, 52],
+            3: [65, 43,  6, 68, 15,  8,  4, 17, 44, 14, 27, 23, 80, 56,  0, 49],
+            4: [38, 63, 32, 60, 29, 35,  9, 21, 22, 47, 10, 77, 61, 50,  7, 59]
+        }
+        
+        vars(self).update(locals())
+        
+        files = glob.glob(data_path + "/*.npz")
+        files.sort()
+        if not use_all_data:
+            tmp_files = []
+            if train:
+                for idx in range(int(len(files)/21)):
+                    if not idx in folds[self.fold]:
+                        tmp_files += files[idx*21:(idx+1)*21]
+            else:
+                for idx in range(int(len(files) / 21)):
+                    if idx in folds[self.fold]:
+                        tmp_files += files[idx * 21:(idx + 1) * 21]
+            files = tmp_files
+        self.files = files
+        print(f"Found {len(files)} items.")
+
+    def __len__(self):
+        if self.train and self.augment:
+            return len(self.files) * 2
+        else:
+            return len(self.files)
+
+    def __getitem__(self, idx):
+        # every other sample is the same as the previous one but flipped
+        np_data = np.load(self.files[idx // 2])
+        if self.experimental_data:
+            signal = np_data["features_das"]
+        else:
+            signal = np_data["features_sim"]
+        image = ((signal - self.stats['signal']['mean']) / self.stats['signal']['std'])
+        image = torch.from_numpy(np.asarray(image).reshape(1, 288, 288)).float()
+        
+        segmentation = np_data["segmentation"]
+        if self.stats['segmentation']['plus_one']:
+            segmentation = segmentation + 1
+        instance_segmentation = np.copy(segmentation).reshape(1, 288, 288)
+        segmentation = torch.from_numpy(np_data["segmentation"]).long()
+        segmentation = segmentation.reshape(1, 288, 288)
+        segmentation = torch.nn.functional.one_hot(segmentation, num_classes=self.stats['num_classes'])
+        segmentation = torch.permute(segmentation, [0, 3, 1, 2])
+        segmentation = segmentation.reshape(self.stats['num_classes'], 288, 288).float()
+        
+        absorption = (np_data['mua'] - self.stats['mua']['std']) / self.stats['mua']['std']
+        absorption = torch.from_numpy(absorption.reshape(1, 288, 288)).float()
+        scattering = (np_data['musp'] - self.stats['musp']['mean']) / self.stats['musp']['std']
+        scattering = torch.from_numpy(scattering.reshape(1, 288, 288)).float()
+        fluence = (np_data['fluence'] - self.stats['fluence']['mean']) / self.stats['fluence']['std']
+        fluence = torch.from_numpy(fluence.reshape(1, 288, 288)).float()
+        
+        # dataloaders cannot torch.stack the batch if instance_segmentation is a
+        # numpy array.
+        # instance_segmentation isn't used in the training loop, it should be 
+        # converted back to uint8 numpy array before using it
+        data =  (image.to(self.device),
+                 segmentation.to(self.device),
+                 absorption.to(self.device),
+                 scattering.to(self.device),
+                 fluence.to(self.device),
+                 torch.from_numpy(instance_segmentation).long()) 
+        
+        # every other sample is the same as the previous one but flipped
+        if self.train and self.augment and (idx % 2 == 1):
+            for item in data[:-1]:
+                item = torch.fliplr(item)
+        
+        return data
 
 
 class PalpaitineMouseDataset(Dataset):
