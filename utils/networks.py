@@ -98,3 +98,21 @@ class RegressionUNet(nn.Module):
         output = self.final(expand)
 
         return output
+    
+    def freeze_encoder(self):
+        for param in self.contr_1_1.parameters():
+            param.requires_grad = False
+        for param in self.contr_1_2.parameters():
+            param.requires_grad = False
+        for param in self.contr_2_1.parameters():
+            param.requires_grad = False
+        for param in self.contr_2_2.parameters():
+            param.requires_grad = False
+        for param in self.contr_3_1.parameters():
+            param.requires_grad = False
+        for param in self.contr_3_2.parameters():
+            param.requires_grad = False
+        for param in self.contr_4_1.parameters():
+            param.requires_grad = False
+        for param in self.contr_4_2.parameters():
+            param.requires_grad = False

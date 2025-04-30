@@ -22,7 +22,7 @@ stats = {
     'segmentation' : {'min' : np.inf, 'max' : -np.inf, 'mean' : 0.0, 'std' : 0.0, 'ssr' : 0.0},
     'mua' : {'min' : np.inf, 'max' : -np.inf, 'mean' : 0.0, 'std' : 0.0, 'ssr' : 0.0},
     'musp' : {'min' : np.inf, 'max' : -np.inf, 'mean' : 0.0, 'std' : 0.0, 'ssr' : 0.0},
-    'signal' : {'min' : np.inf, 'max' : -np.inf, 'mean' : 0.0, 'std' : 0.0, 'ssr' : 0.0},
+    'signal' : {'min' : np.inf, 'max' : -np.inf, 'mean' : 0.0, 'std' : 0.0, 'ssr' : 0.0}
 }
 print(f"Found {len(files)} items. computing min, max and means...")
 for file_idx, file in enumerate(files):
@@ -73,7 +73,13 @@ if stats['segmentation']['min'] == -1:
 else:
     stats['segmentation']['plus_one'] = False
 stats['num_classes'] = int(np.round(stats['segmentation']['max']) + 1)
+stats['dx'] = (32e-3) / 300 # 32mm / 300 pixels = 0.00010666666666667 m/pixel
 print('\n', json.dumps(stats, indent=4))
+
+# adding the sample naming convention to states as I used for synthetic datasets
+stats['normalisation_X'] = stats['signal']
+stats['normalisation_mu_a'] = stats['mua']
+stats['normalisation_Phi'] = stats['fluence']
     
 with open(save_name, 'w') as f:
     json.dump(stats, f, indent='\t')

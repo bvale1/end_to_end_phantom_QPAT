@@ -58,14 +58,16 @@ for fold in [0, 1, 2, 3, 4]:
     '''
     with open(f"utils/dataset_stats.json") as f:
         stats = json.load(f)
-    breakpoint()
+    
     train_data = MemoryFriendlyPalpaitineDataset(
-        data_path=f"{DATA_PATH}/training", stats=stats, fold=fold, train=True,
-        device=device, augment=True, experimental_data=EXPERIMENTAL_DATA
+        data_path=f"{DATA_PATH}/training", stats=stats, transform='standardise',
+        fold=fold, train=True, device=device, augment=True, 
+        experimental_data=EXPERIMENTAL_DATA
     )
     val_data = MemoryFriendlyPalpaitineDataset(
-        data_path=f"{DATA_PATH}/training", stats=stats, fold=fold, train=False,
-        device=device, augment=False, experimental_data=EXPERIMENTAL_DATA
+        data_path=f"{DATA_PATH}/training", stats=stats, transform='standardise',
+        fold=fold, train=False, device=device, augment=False,
+        experimental_data=EXPERIMENTAL_DATA
     )
     
     trainloader = DataLoader(dataset=train_data, shuffle=True, batch_size=15)

@@ -60,8 +60,8 @@ class GeneralisedSignalToNoiseRatio:
 GCNR = GeneralisedSignalToNoiseRatio()
 EXPERIMENTAL = False
 
-PATH_EXP = rf"{DATA_PATH}/model_weights_experiment/"
-PATH_SIM = rf"{DATA_PATH}/model_weights_simulation/"
+PATH_EXP = rf"{DATA_PATH}/model_weights_experiment"
+PATH_SIM = rf"{DATA_PATH}/model_weights_simulation"
 
 COLOURS = [
     "#228833ff",  # GREEN

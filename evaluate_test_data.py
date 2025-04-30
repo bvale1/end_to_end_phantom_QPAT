@@ -1,15 +1,20 @@
 from data_path import DATA_PATH
 import torch
 from torch.utils.data import DataLoader
-from utils.data_loading import PalpaitineDataset, PalpaitineMouseDataset
+from utils.data_loading import PalpaitineDataset, PalpaitineMouseDataset, MemoryFriendlyPalpaitineDataset
 from utils.networks import RegressionUNet
 import numpy as np
 import os
+import json
 
 # Switch these to two if you want to re-evaluate the data with the U-Nets!
-REEVALUATE_TEST_DATA = False
-REEVALUATE_FLOW_DATA = False
-REEVALUATE_MOUSE_DATA = False
+REEVALUATE_TEST_DATA = True
+REEVALUATE_FLOW_DATA = True
+REEVALUATE_MOUSE_DATA = True
+
+#with open(f"utils/dataset_stats.json") as f:
+#    stats = json.load(f)
+
 
 train_data = PalpaitineDataset(data_path=f"{DATA_PATH}/training",
                                augment=False, use_all_data=True, experimental_data=True)
@@ -23,6 +28,21 @@ std_signal = (np.std(train_data.images.detach().cpu().numpy()))
 mean_fluence = (np.mean(train_data.fluences.detach().cpu().numpy()))
 std_fluence = (np.std(train_data.fluences.detach().cpu().numpy()))
 
+'''
+mean_musp = stats['musp']['mean']
+std_musp = stats['musp']['std']
+mean_mua = stats['mua']['mean']
+std_mua = stats['mua']['std']
+mean_signal = stats['signal']['mean']
+std_signal = stats['signal']['std']
+mean_fluence = stats['fluence']['mean']
+std_fluence = stats['fluence']['std']
+'''
+print(f'mean_musp: {mean_musp}, std_musp: {std_musp}')
+print(f'mean_mua: {mean_mua}, std_mua: {std_mua}')
+print(f'mean_signal: {mean_signal}, std_signal: {std_signal}')
+print(f'mean_fluence: {mean_fluence}, std_fluence: {std_fluence}')
+
 for BASE_PATH in [f"{DATA_PATH}/model_weights_experiment/fold_", f"{DATA_PATH}/model_weights_simulation/fold_"]:
 
     for fold in [0, 1, 2, 3, 4]:
@@ -35,7 +55,7 @@ for BASE_PATH in [f"{DATA_PATH}/model_weights_experiment/fold_", f"{DATA_PATH}/m
         # ##############################################################################################################
         device = torch.device("cpu")
         model = RegressionUNet(out_channels=2)
-        model.load_state_dict(torch.load(f"{BASE_PATH}{fold}/model_parameters.pt", map_location="cpu"))
+        model.load_state_dict(torch.load(f"{BASE_PATH}{fold}/model_parameters.pt", map_location="cpu", weights_only=True))
         model.to(device)
         model.float()
 
@@ -44,7 +64,7 @@ for BASE_PATH in [f"{DATA_PATH}/model_weights_experiment/fold_", f"{DATA_PATH}/m
             # ##############################################################################################################
             # Analyse test data
             # ##############################################################################################################
-
+            
             val_data = PalpaitineDataset(data_path=f"{DATA_PATH}/test",
                                          use_all_data=True,
                                          train=False, device=device, fold=0,
@@ -57,6 +77,13 @@ for BASE_PATH in [f"{DATA_PATH}/model_weights_experiment/fold_", f"{DATA_PATH}/m
                                          mean_fluence=mean_fluence,
                                          std_fluence=std_fluence,
                                          experimental_data=True)
+            
+            
+            #val_data = MemoryFriendlyPalpaitineDataset(
+            #    data_path=f"{DATA_PATH}/test", stats=stats, transform='standardise',
+            #    fold=0, train=False, device=device, augment=False,
+            #    use_all_data=True, experimental_data=True
+            #)
             valloader = DataLoader(dataset=val_data, batch_size=1)
 
             gt_inputs = []
