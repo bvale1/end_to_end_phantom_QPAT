@@ -77,9 +77,9 @@ stats['dx'] = (32e-3) / 300 # 32mm / 300 pixels = 0.00010666666666667 m/pixel
 print('\n', json.dumps(stats, indent=4))
 
 # adding the sample naming convention to states as I used for synthetic datasets
-stats['normalisation_X'] = stats['signal']
-stats['normalisation_mu_a'] = stats['mua']
-stats['normalisation_Phi'] = stats['fluence']
-    
+stats['normalisation_X'] = [stats['signal']]
+stats['normalisation_mu_a'] = [stats['mua']]
+stats['normalisation_Phi'] = [stats['fluence']]
+
 with open(save_name, 'w') as f:
     json.dump(stats, f, indent='\t')

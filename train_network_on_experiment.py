@@ -9,7 +9,8 @@ from utils.data_loading import PalpaitineDataset, MemoryFriendlyPalpaitineDatase
 
 EXPERIMENTAL_DATA = True
 NUM_EPOCHS = 200
-BASE_PATH = rf"{DATA_PATH}/model_weights_experiment\fold_"
+#BASE_PATH = rf"{DATA_PATH}/model_weights_experiment\fold_"
+BASE_PATH = rf"model_weights_experiment/fold_"
 
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 print(f'using device: {device}')
